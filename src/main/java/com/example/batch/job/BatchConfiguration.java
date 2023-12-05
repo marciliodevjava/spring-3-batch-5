@@ -12,8 +12,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import javax.sql.DataSource;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.UUID;
 
 @Configuration
@@ -36,9 +42,14 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public Tasklet tasklet(@Value("#{jobParameters['uuid']}") String uuid) {
+    public Tasklet tasklet(@Value("#{jobParameters['uuid']}") String uuid,
+                           @Value("#{jobParameters['date']}") String date,
+                           @Value("#{jobParameters['hour']}") String hour) {
         return (contribution, chunkContext) -> {
-            System.out.println("Olá, mundo! ---> UUID: " + uuid);
+            System.out.println("Olá, mundo!");
+            System.out.println("UUID ---> " + uuid);
+            System.out.println("HORA ---> " + hour);
+            System.out.println("DATA ---> " + date);
             return RepeatStatus.FINISHED;
         };
     }
@@ -46,12 +57,22 @@ public class BatchConfiguration {
     @Bean
     ApplicationRunner runner(JobLauncher jobLauncher, Job job) {
         return args -> {
+            Date today = new Date();
+            String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+            String hora = today.getHours() + ":" + today.getMinutes();
             JobParameters jobParametrs = new JobParametersBuilder()
                     .addString("uuid", UUID.randomUUID().toString())
+                    .addString("date", date)
+                    .addString("hour", hora)
                     .toJobParameters();
             JobExecution run = jobLauncher.run(job, jobParametrs);
             var instanceId = run.getJobInstance().getInstanceId();
             System.out.println("instanceId: " + instanceId);
         };
+    }
+
+    @Bean
+    JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
     }
 }
