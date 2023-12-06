@@ -83,25 +83,28 @@ public class BatchConfiguration {
         };
     }
 
-    record CsvRow(int rank,String name,String platform,int year, String genre, String publisher,
-                  float na,float eu, float jp, float other,float global){
+    record CsvRow(int rank, String name, String platform, int year, String genre, String publisher,
+                  float na, float eu, float jp, float other, float global) {
 
     }
+
+    private static int parseIntText(String text){
+        if(text != null && !text.contains("NA") && !text.contains("N/A")) return Integer.parseInt(text);
+        return 0;
+    }
     @Bean
-    FlatFileItemReader<CsvRow> csvRowFlatFileItemReader(Resource resource){
+    FlatFileItemReader<CsvRow> csvRowFlatFileItemReader(@Value("file:\\Users\\Nova\\Documents\\worckspace\\batch-1\\data\\vgsales.csv") Resource resource) {
         var ffir = new FlatFileItemReaderBuilder<CsvRow>()
                 .resource(resource)
-                .delimited() .delimiter(",")
+                .name("csvFFIR")
+                .delimited().delimiter(",")
                 .names("rank,name,platform,year,genre,publisher,na,eu,jp,other,global".split(","))
                 .linesToSkip(1)
-                .fieldSetMapper(new FieldSetMapper<CsvRow>() {
-                    @Override
-                    public CsvRow mapFieldSet(FieldSet fieldSet) throws BindException {
-                        return new CsvRow(
+                .fieldSetMapper(fieldSet -> new CsvRow(
                                 fieldSet.readInt(0),
                                 fieldSet.readString(1),
                                 fieldSet.readString(2),
-                                fieldSet.readInt(3),
+                                parseIntText(fieldSet.readString(3)),
                                 fieldSet.readString(4),
                                 fieldSet.readString(5),
                                 fieldSet.readFloat(6),
@@ -109,31 +112,23 @@ public class BatchConfiguration {
                                 fieldSet.readFloat(8),
                                 fieldSet.readFloat(9),
                                 fieldSet.readFloat(10)
-                        );
-                    }
-                })
+                ))
                 .build();
+        return ffir;
     }
+
+
     @Bean
     Step csvToDb(JobRepository jobRepository,
                  PlatformTransactionManager transactionManager,
-                 @Value("file:\\Users\\Nova\\Documents\\worckspace\\batch-1\\data\\vgsales.csv") Resource data) throws IOException {
-        var lines = (String[]) null;
-        try(var reader = new InputStreamReader(data.getInputStream())){
-            var strings = FileCopyUtils.copyToString(reader);
-            lines = strings.split("\\n");
-//            System.out.println("there are " + lines.length + " rows");
-//            Arrays.stream(lines).forEach(System.out::println);
-        }
+                 FlatFileItemReader<CsvRow> csvRowFlatFileItemReader) throws IOException {
+
         return new StepBuilder("csvToDb", jobRepository)
-                .<String,String>chunk(100, transactionManager)
-                .reader(new ListItemReader<>(Arrays.asList(lines)))
-                .writer(new ItemWriter<String>() {
-                    @Override
-                    public void write(Chunk<? extends String> chunk) throws Exception {
+                .<CsvRow, CsvRow>chunk(100, transactionManager)
+                .reader(csvRowFlatFileItemReader)
+                .writer(chunk ->  {
                         var oneHundreRows = chunk.getItems();
                         System.out.println(oneHundreRows);
-                    }
                 })
                 .build();
     }
