@@ -88,6 +88,7 @@ public class BatchConfiguration {
             var strings = FileCopyUtils.copyToString(reader);
             lines = strings.split("\\n");
             System.out.println("there are " + lines.length + " rows");
+//            Arrays.stream(lines).forEach(System.out::println);
         }
         return new StepBuilder("csvToDb", jobRepository)
                 .<String,String>chunk(100, transactionManager)
