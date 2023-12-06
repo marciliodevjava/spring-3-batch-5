@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Configuration
@@ -84,8 +85,8 @@ public class BatchConfiguration {
                  @Value("file:\\Users\\Nova\\Documents\\worckspace\\batch-1\\data\\vgsales.csv") Resource data) throws IOException {
         var lines = (String[]) null;
         try(var reader = new InputStreamReader(data.getInputStream())){
-            var string = FileCopyUtils.copyToString(reader);
-            lines = string.split(System.lineSeparator());
+            var strings = FileCopyUtils.copyToString(reader);
+            lines = strings.split("\\n");
             System.out.println("there are " + lines.length + " rows");
         }
         return new StepBuilder("csvToDb", jobRepository)
