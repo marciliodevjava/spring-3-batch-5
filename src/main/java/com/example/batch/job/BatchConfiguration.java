@@ -8,18 +8,24 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.*;
+import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.util.FileCopyUtils;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
@@ -73,19 +79,23 @@ public class BatchConfiguration {
     }
 
     @Bean
-    Step csvToDb(JobRepository jobRepository, PlatformTransactionManager transactionManager){
+    Step csvToDb(JobRepository jobRepository,
+                 PlatformTransactionManager transactionManager,
+                 @Value("file:\\Users\\Nova\\Documents\\worckspace\\batch-1\\data\\vgsales.csv") Resource data) throws IOException {
+        var lines = (String[]) null;
+        try(var reader = new InputStreamReader(data.getInputStream())){
+            var string = FileCopyUtils.copyToString(reader);
+            lines = string.split(System.lineSeparator());
+            System.out.println("there are " + lines.length + " rows");
+        }
         return new StepBuilder("csvToDb", jobRepository)
                 .<String,String>chunk(100, transactionManager)
-                .reader(new ItemReader<String>() {
-                    @Override
-                    public String read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
-                        return null;
-                    }
-                })
+                .reader(new ListItemReader<>(Arrays.asList(lines)))
                 .writer(new ItemWriter<String>() {
                     @Override
                     public void write(Chunk<? extends String> chunk) throws Exception {
-
+                        var oneHundreRows = chunk.getItems();
+                        System.out.println(oneHundreRows);
                     }
                 })
                 .build();
