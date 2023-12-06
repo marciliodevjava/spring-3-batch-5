@@ -101,17 +101,17 @@ public class BatchConfiguration {
                 .names("rank,name,platform,year,genre,publisher,na,eu,jp,other,global".split(","))
                 .linesToSkip(1)
                 .fieldSetMapper(fieldSet -> new CsvRow(
-                                fieldSet.readInt(0),
-                                fieldSet.readString(1),
-                                fieldSet.readString(2),
-                                parseIntText(fieldSet.readString(3)),
-                                fieldSet.readString(4),
-                                fieldSet.readString(5),
-                                fieldSet.readFloat(6),
-                                fieldSet.readFloat(7),
-                                fieldSet.readFloat(8),
-                                fieldSet.readFloat(9),
-                                fieldSet.readFloat(10)
+                                fieldSet.readInt("rank"),
+                                fieldSet.readString("name"),
+                                fieldSet.readString("platform"),
+                                parseIntText(fieldSet.readString("year")),
+                                fieldSet.readString("genre"),
+                                fieldSet.readString("publisher"),
+                                fieldSet.readFloat("na"),
+                                fieldSet.readFloat("eu"),
+                                fieldSet.readFloat("jp"),
+                                fieldSet.readFloat("other"),
+                                fieldSet.readFloat("global")
                 ))
                 .build();
         return ffir;
