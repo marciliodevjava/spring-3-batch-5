@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.FileCopyUtils;
@@ -103,8 +104,8 @@ public class BatchConfiguration {
     @Bean
     JdbcBatchItemWriter<CsvRow> csvRowJdbcBatchItemWriter(DataSource dataSource){
         String sql = """
-                insert into video_game_sales(rant, name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales)
-                values(:rant, 
+                insert into video_game_sales(`rank`, name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales)
+                values(:rank, 
                        :name, 
                        :platform, 
                        :year, 
@@ -119,23 +120,44 @@ public class BatchConfiguration {
         return new JdbcBatchItemWriterBuilder<CsvRow>()
                 .sql(sql)
                 .dataSource(dataSource)
+                .itemSqlParameterSourceProvider(new ItemSqlParameterSourceProvider<CsvRow>() {
+                    @Override
+                    public SqlParameterSource createSqlParameterSource(CsvRow item) {
+                        HashMap<String, Object> map = new HashMap<String, Object>();
+                        map.putAll(Map.of(
+                                "rank", item.rank(),
+                                "name", item.name(),
+                                "platform", item.platform(),
+                                "year", item.year(),
+                                "genre", item.genre(),
+                                "publisher", item.publisher()
+                        ));
+                        map.putAll(Map.of(
+                                "na_sales", item.na(),
+                                "eu_sales", item.eu(),
+                                "jp_sales", item.jp(),
+                                "other_sales", item.other(),
+                                "global_sales", item.global()
+                        ));
+                        return new MapSqlParameterSource(map);
+                    }
+                })
                 .itemPreparedStatementSetter(new ItemPreparedStatementSetter<CsvRow>() {
                     @Override
                     public void setValues(CsvRow item, PreparedStatement ps) throws SQLException {
-                        /*
-                       :rant,
-                       :name,
-                       :platform,
-                       :year,
-                       :genre,
-                       :publisher,
-                       :na_sales,
-                       :eu_sales,
-                       :jp_sales,
-                       :other_sales,
-                       :global_sales) ;*/
-                        ps.setString(0, String.valueOf(item.rank));
-                        ps.setString(1, String.valueOf(item.name));
+                        int i = 0;
+                        ps.setInt(i++, item.rank());
+                        ps.setString(i++, item.name());
+                        ps.setString(i++, item.platform());
+                        ps.setInt(i++, item.year());
+                        ps.setString(i++, item.genre());
+                        ps.setString(i++, item.publisher());
+                        ps.setFloat(i++, item.na());
+                        ps.setFloat(i++, item.eu());
+                        ps.setFloat(i++, item.jp());
+                        ps.setFloat(i++, item.other());
+                        ps.setFloat(i++, item.global());
+                        ps.execute();
                     }
                 })
                 .build();
@@ -170,15 +192,13 @@ public class BatchConfiguration {
     @Bean
     Step csvToDb(JobRepository jobRepository,
                  PlatformTransactionManager transactionManager,
-                 FlatFileItemReader<CsvRow> csvRowFlatFileItemReader) throws IOException {
+                 FlatFileItemReader<CsvRow> csvRowFlatFileItemReader,
+                 JdbcBatchItemWriter<CsvRow> csvRowJdbcBatchItemWriter) throws IOException {
 
         return new StepBuilder("csvToDb", jobRepository)
                 .<CsvRow, CsvRow>chunk(100, transactionManager)
                 .reader(csvRowFlatFileItemReader)
-                .writer(chunk ->  {
-                        var oneHundreRows = chunk.getItems();
-                        System.out.println(oneHundreRows);
-                })
+                .writer(csvRowJdbcBatchItemWriter)
                 .build();
     }
 
