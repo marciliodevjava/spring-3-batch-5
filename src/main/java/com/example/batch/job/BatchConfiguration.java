@@ -126,11 +126,11 @@ public class BatchConfiguration {
                         HashMap<String, Object> map = new HashMap<String, Object>();
                         map.putAll(Map.of(
                                 "rank", item.rank(),
-                                "name", item.name(),
-                                "platform", item.platform(),
+                                "name", item.name().trim(),
+                                "platform", item.platform().trim(),
                                 "year", item.year(),
-                                "genre", item.genre(),
-                                "publisher", item.publisher()
+                                "genre", item.genre().trim(),
+                                "publisher", item.publisher().trim()
                         ));
                         map.putAll(Map.of(
                                 "na_sales", item.na(),
@@ -203,7 +203,8 @@ public class BatchConfiguration {
     }
 
     @Bean
-    JdbcTemplate jdbcTemplate(DataSource dataSource) {
+    JdbcTemplate jdbcTemplate(DataSource dataSource) throws SQLException {
+        System.out.println(dataSource.getConnection());
         return new JdbcTemplate(dataSource);
     }
 }
