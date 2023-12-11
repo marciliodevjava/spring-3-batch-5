@@ -1,6 +1,6 @@
 create table if not exists video_game_sales
 (
-    rant int,
+    `rank` int,
     name text,
     platform text,
     year int,
