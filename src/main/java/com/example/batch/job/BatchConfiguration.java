@@ -198,7 +198,6 @@ public class BatchConfiguration {
 
     @Bean
     JdbcTemplate jdbcTemplate(DataSource dataSource) throws SQLException {
-        System.out.println(dataSource.getConnection());
         return new JdbcTemplate(dataSource);
     }
 }
